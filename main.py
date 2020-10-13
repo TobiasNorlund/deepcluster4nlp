@@ -66,8 +66,6 @@ def main(args):
     torch.cuda.manual_seed_all(args.seed)
     np.random.seed(args.seed)
 
-    # download imdb dataset
-    # dataset = datasets.imdb_dataset(args.data)
 
     # preprocessing of data
     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
@@ -79,18 +77,11 @@ def main(args):
 
     # load the data
     end = time.time()
-    # dataset = datasets.ImageFolder(args.data, transform=transforms.Compose(tra))
-    # if args.verbose:
-    #     print(('Load dataset: {0:.2f} s'.format(time.time() - end)))
-
-    # dataloader = torch.utils.data.DataLoader(dataset,
-    #                                          batch_size=args.batch,
-    #                                          num_workers=args.workers,
-    #                                          pin_memory=True)
-
     tokenizer = get_tokenizer()
     dataset = ImdbDataset(False, tokenizer)
     dataloader = get_dataloader(False, args.batch)
+    if args.verbose:
+        print(('Load dataset: {0:.2f} s'.format(time.time() - end)))
 
     # CNN
     if args.verbose:
@@ -148,8 +139,6 @@ def main(args):
         end = time.time()
 
         # remove head
-        # model.top_layer = None
-        # model.classifier = nn.Sequential(*list(model.classifier.children())[:-1])
         model.top_layer = None
 
         # get the features for the whole dataset
@@ -265,7 +254,7 @@ def train(loader, model, crit, opt, epoch):
                 'optimizer' : opt.state_dict()
             }, path)
 
-        target = target.cuda(async=True)
+        # target = target.cuda(async=True)
         input_var = torch.autograd.Variable(input_tensor.cuda())
         target_var = torch.autograd.Variable(target)
 
