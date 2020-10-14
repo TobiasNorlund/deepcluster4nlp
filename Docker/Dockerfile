@@ -35,8 +35,9 @@ RUN export CMAKE_PREFIX_PATH=/opt/conda/ &&\
 RUN pip install torch==0.4.1 \
                 pytorch-nlp \
                 transformers \
-                faiss \
-                bpython 
+                faiss-cpu \
+                bpython \
+                wandb
 
 RUn conda init bash
 

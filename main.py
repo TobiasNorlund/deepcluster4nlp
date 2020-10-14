@@ -18,8 +18,12 @@ import models
 from models.TextCNN import textcnn
 from util import AverageMeter, Logger, UnifLabelSampler
 from data_loader import *
-import wandb
+
 import pandas as pd
+import wandb
+
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
 
 
 def parse_args():
@@ -97,7 +101,7 @@ def main(args):
     #model.top_layer = None
     
     #model.features = torch.nn.DataParallel(model.features, device_ids=[0])
-    model.cuda()
+    model.to(device)
     cudnn.benchmark = True
 
     wandb.watch(model)
@@ -116,7 +120,7 @@ def main(args):
     #        )
 
     # define loss function
-    criterion = nn.CrossEntropyLoss().cuda()
+    criterion = nn.CrossEntropyLoss().to(device)
 
     # optionally resume from a checkpoint
     if args.resume:
@@ -238,7 +242,7 @@ def main(args):
             print('####################### \n')
 
         # wandb log
-        wandb.log(summary_dict)
+        # wandb.log(summary_dict)
 
         # save running checkpoint
         torch.save({'epoch': epoch + 1,
@@ -309,8 +313,8 @@ def train(loader, model, crit, opt, epoch):
             }, path)
 
         # target = target.cuda(async=True)
-        input_var = torch.autograd.Variable(input_tensor.cuda())
-        target_var = torch.autograd.Variable(target.cuda())
+        input_var = torch.autograd.Variable(input_tensor.to(device))
+        target_var = torch.autograd.Variable(target.to(device))
 
         output = model(input_var)
         loss = crit(output, target_var)
@@ -348,12 +352,11 @@ def compute_features(dataloader, model, N):
     batch_time = AverageMeter()
     end = time.time()
     model.eval()
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     # discard the label information in the dataloader
     for i, batch in enumerate(dataloader):
         # input_var = torch.autograd.Variable(input_tensor.cuda(), volatile=True)
         with torch.no_grad():
-            input_var = torch.autograd.Variable(batch[0].cuda())
+            input_var = torch.autograd.Variable(batch[0].to(device))
 
             aux = model(input_var).data.cpu().numpy()
 
