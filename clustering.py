@@ -93,7 +93,7 @@ def preprocess_features(npdata, pca_factor=16):
     #if pca_dim < 4: pca_dim = 4
     #pca_dim = int(pca_dim)
 
-    pca_dim = 256
+    pca_dim = 16
 
     # Apply PCA-whitening with Faiss
     mat = faiss.PCAMatrix (ndim, pca_dim, eigen_power=-0.5)
