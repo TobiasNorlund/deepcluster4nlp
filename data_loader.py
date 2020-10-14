@@ -2,6 +2,7 @@ import torch
 from transformers import DataCollatorForLanguageModeling, GPT2TokenizerFast
 from torch.utils.data import Dataset, DataLoader
 from torchnlp.datasets import imdb_dataset
+from torch.nn.utils.rnn import pad_sequence
 
 
 class ImdbDataset(Dataset):
@@ -14,9 +15,7 @@ class ImdbDataset(Dataset):
         return len(self.data)
 
     def __getitem__(self, index):
-        return {
-            "input_ids": torch.tensor(self.tokenizer.encode(self.data[index]["text"]))
-        }
+        return torch.tensor(self.tokenizer.encode(self.data[index]["text"])), torch.tensor(0)
 
 
 def get_tokenizer():
@@ -25,9 +24,11 @@ def get_tokenizer():
     return tokenizer
 
 
-def get_dataloader(is_train: bool, batch_size=2):
-    tokenizer = get_tokenizer()
-    imdb_ds = ImdbDataset(is_train, tokenizer)
-    data_collator = DataCollatorForLanguageModeling(tokenizer, mlm=False)
-    data_loader = DataLoader(imdb_ds, batch_size=batch_size, collate_fn=data_collator)
+def get_dataloader(dataset, tokenizer, batch_size=2):
+    def collate(examples):
+        return (pad_sequence([x[0] for x in examples], True, tokenizer.pad_token_id),
+                torch.tensor([x[1] for x in examples]))
+
+    # data_collator = DataCollatorForLanguageModeling(tokenizer, mlm=False)
+    data_loader = DataLoader(dataset, batch_size=batch_size, collate_fn=collate, num_workers=1)
     return data_loader

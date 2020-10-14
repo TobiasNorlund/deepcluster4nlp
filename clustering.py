@@ -120,22 +120,22 @@ def make_graph(xb, nnn):
     return I, D
 
 
-def cluster_assign(images_lists, dataset):
+def cluster_assign(cluster_lists, dataset):
     """Creates a dataset from clustering, with clusters as labels.
     Args:
-        images_lists (list of list): for each cluster, the list of image indexes
+        cluster_lists (list of list): for each cluster, the list of data indexes
                                     belonging to this cluster
         dataset (list): initial dataset
     Returns:
         ReassignedDataset(torch.utils.data.Dataset): a dataset with clusters as
                                                      labels
     """
-    assert images_lists is not None
+    assert cluster_lists is not None
     pseudolabels = []
-    image_indexes = []
-    for cluster, images in enumerate(images_lists):
-        image_indexes.extend(images)
-        pseudolabels.extend([cluster] * len(images))
+    data_indexes = []
+    for cluster, datapoints in enumerate(cluster_lists):
+        data_indexes.extend(datapoints)
+        pseudolabels.extend([cluster] * len(datapoints))
 
     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                      std=[0.229, 0.224, 0.225])
@@ -144,7 +144,7 @@ def cluster_assign(images_lists, dataset):
                             transforms.ToTensor(),
                             normalize])
 
-    return ReassignedDataset(image_indexes, pseudolabels, dataset, t)
+    return ReassignedDataset(data_indexes, pseudolabels, dataset, t)
 
 
 def run_kmeans(x, nmb_clusters, verbose=False):
@@ -184,25 +184,29 @@ def run_kmeans(x, nmb_clusters, verbose=False):
     return [int(n[0]) for n in I], losses[-1]
 
 
-def arrange_clustering(images_lists):
+def arrange_clustering(cluster_lists):
     pseudolabels = []
-    image_indexes = []
-    for cluster, images in enumerate(images_lists):
-        image_indexes.extend(images)
-        pseudolabels.extend([cluster] * len(images))
-    indexes = np.argsort(image_indexes)
+    data_indexes = []
+    for cluster, datapoints in enumerate(cluster_lists):
+        data_indexes.extend(datapoints)
+        pseudolabels.extend([cluster] * len(datapoints))
+    indexes = np.argsort(data_indexes)
     return np.asarray(pseudolabels)[indexes]
 
 
 class Kmeans(object):
     def __init__(self, k):
         self.k = k
+        self.cluster_lists = None
 
     def cluster(self, data, verbose=False):
-        """Performs k-means clustering.
-            Args:
-                x_data (np.array N * dim): data to cluster
         """
+        Performs k-means clustering.
+        :param data: data (np.array N*dim: data to cluster
+        :param verbose:
+        :return:
+        """
+
         end = time.time()
 
         # PCA-reducing, whitening and L2-normalization
@@ -210,9 +214,9 @@ class Kmeans(object):
 
         # cluster the data
         I, loss = run_kmeans(xb, self.k, verbose)
-        self.images_lists = [[] for i in range(self.k)]
+        self.cluster_lists = [[] for i in range(self.k)]
         for i in range(len(data)):
-            self.images_lists[I[i]].append(i)
+            self.cluster_lists[I[i]].append(i)
 
         if verbose:
             print('k-means time: {0:.0f} s'.format(time.time() - end))

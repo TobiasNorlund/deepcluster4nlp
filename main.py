@@ -1,20 +1,16 @@
 
 import argparse
 import os
-import pickle
 import time
 
 import numpy as np
 from sklearn.metrics.cluster import normalized_mutual_info_score
-import torch
 import torch.nn as nn
 import torch.nn.parallel
 import torch.backends.cudnn as cudnn
 import torch.optim
 import torch.utils.data
 import torchvision.transforms as transforms
-# import torchvision.datasets as datasets
-import torchnlp.datasets as datasets
 
 import clustering
 import models
@@ -29,7 +25,7 @@ def parse_args():
     parser.add_argument('--arch', '-a', type=str, metavar='ARCH',
                         choices=['alexnet', 'vgg16', 'textcnn'], default='textcnn',
                         help='CNN architecture (default: alexnet)')
-    #parser.add_argument('--sobel', action='store_true', help='Sobel filtering')
+    # parser.add_argument('--sobel', action='store_true', help='Sobel filtering')
     parser.add_argument('--clustering', type=str, choices=['Kmeans', 'PIC'],
                         default='Kmeans', help='clustering algorithm (default: Kmeans)')
     parser.add_argument('--nmb_cluster', '--k', type=int, default=500,
@@ -66,20 +62,11 @@ def main(args):
     torch.cuda.manual_seed_all(args.seed)
     np.random.seed(args.seed)
 
-
-    # preprocessing of data
-    normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                                     std=[0.229, 0.224, 0.225])
-    tra = [transforms.Resize(256),
-           transforms.CenterCrop(224),
-           transforms.ToTensor(),
-           normalize]
-
     # load the data
     end = time.time()
     tokenizer = get_tokenizer()
-    dataset = ImdbDataset(False, tokenizer)
-    dataloader = get_dataloader(False, args.batch)
+    dataset = ImdbDataset(True, tokenizer)
+    dataloader = get_dataloader(dataset, tokenizer, args.batch)
     if args.verbose:
         print(('Load dataset: {0:.2f} s'.format(time.time() - end)))
 
@@ -129,8 +116,6 @@ def main(args):
     # creating cluster assignments log
     cluster_log = Logger(os.path.join(args.exp, 'clusters'))
 
-
-
     # clustering algorithm to use
     deepcluster = clustering.__dict__[args.clustering](args.nmb_cluster)
 
@@ -152,26 +137,29 @@ def main(args):
         # assign pseudo-labels
         if args.verbose:
             print('Assign pseudo labels')
-        train_dataset = clustering.cluster_assign(deepcluster.images_lists,
-                                                  dataset.imgs)
+
+        train_dataset = clustering.cluster_assign(deepcluster.cluster_lists,
+                                                  dataset.data)
 
         # uniformly sample per target
         sampler = UnifLabelSampler(int(args.reassign * len(train_dataset)),
                                    deepcluster.images_lists)
 
-        train_dataloader = torch.utils.data.DataLoader(
-            train_dataset,
-            batch_size=args.batch,
-            num_workers=args.workers,
-            sampler=sampler,
-            pin_memory=True,
-        )
+        # train_dataloader = torch.utils.data.DataLoader(
+        #     train_dataset,
+        #     batch_size=args.batch,
+        #     num_workers=args.workers,
+        #     sampler=sampler,
+        #     pin_memory=True,
+        # )
+
+        train_dataloader = get_dataloader(train_dataset, tokenizer, args.batch)
 
         # set last fully connected layer
         mlp = list(model.classifier.children())
         mlp.append(nn.ReLU(inplace=True).cuda())
         model.classifier = nn.Sequential(*mlp)
-        model.top_layer = nn.Linear(fd, len(deepcluster.images_lists))
+        model.top_layer = nn.Linear(fd, len(deepcluster.cluster_lists))
         model.top_layer.weight.data.normal_(0, 0.01)
         model.top_layer.bias.data.zero_()
         model.top_layer.cuda()
