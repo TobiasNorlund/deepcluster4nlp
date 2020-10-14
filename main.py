@@ -166,10 +166,7 @@ def main(args):
         train_dataloader = get_dataloader(train_dataset, tokenizer, args.batch)
 
         # set last fully connected layer
-        mlp = list(model.classifier.children())
-        mlp.append(nn.ReLU(inplace=True).cuda())
-        model.classifier = nn.Sequential(*mlp)
-        model.top_layer = nn.Linear(fd, len(deepcluster.cluster_lists))
+        model.top_layer = nn.Linear(4096, len(deepcluster.cluster_lists))
         model.top_layer.weight.data.normal_(0, 0.01)
         model.top_layer.bias.data.zero_()
         model.top_layer.cuda()
