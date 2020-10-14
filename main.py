@@ -19,6 +19,7 @@ from models.TextCNN import textcnn
 from util import AverageMeter, Logger, UnifLabelSampler
 from data_loader import *
 import wandb
+import pandas as pd
 
 
 def parse_args():
@@ -153,6 +154,13 @@ def main(args):
 
         # get the features for the whole dataset
         features = compute_features(dataloader, model, len(dataset))
+
+        # save the features and dataset
+        dataset = wandb.Artifact(name=f'features', type='dataset')
+        with dataset.new_file(f'epoch_{epoch}.csv') as f:
+            pd.DataFrame([[d['text'] for d in dataset.data], features]).to_csv(f)
+
+        run.use_artifact(dataset)
 
         # cluster the features
         if args.verbose:

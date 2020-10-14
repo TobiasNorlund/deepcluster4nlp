@@ -5,3 +5,4 @@ torchvision
 pytorch-nlp
 transformers
 wandb
+pandas
