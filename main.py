@@ -2,6 +2,7 @@
 import argparse
 import os
 import time
+import copy
 
 import numpy as np
 from sklearn.metrics.cluster import normalized_mutual_info_score
@@ -84,7 +85,7 @@ def main(args):
     if args.verbose:
         print(('Architecture: {}'.format(args.arch)))
     
-    num_class_features = 64
+    num_class_features = 4096
     model = textcnn(tokenizer,num_class_features=num_class_features)
     #model = models.__dict__[args.arch](tokenizer)
     #fd =int(model.top_layer.weight.size()[1])  # replaced by num_class_features
@@ -114,7 +115,7 @@ def main(args):
             checkpoint = torch.load(args.resume)
             args.start_epoch = checkpoint['epoch']
             # remove top_layer parameters from checkpoint
-            for key in checkpoint['state_dict']:
+            for key in copy.deepcopy(checkpoint['state_dict']):
                 if 'top_layer' in key:
                     del checkpoint['state_dict'][key]
             model.load_state_dict(checkpoint['state_dict'])
