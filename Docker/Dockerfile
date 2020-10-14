@@ -41,20 +41,6 @@ RUN pip install torch==0.4.1 \
 
 RUn conda init bash
 
-#RUN wget https://github.com/facebookresearch/faiss/archive/v1.3.0.tar.gz &&\
-#   tar -xzf v1.3.0.tar.gz &&\
-#   rm v1.3.0.tar.gz &&\
-#   cd faiss-1.3.0 &&\
-#   ./configure &&\
-#   make &&\
-#   make install &&\
-#   cd gpu &&\
-#   make -j &&\
-#   cd ../python &&\
-#   cd ../ &&\
-#   make py &&\
-#   conda init bash
-
 #  RUN pip install bpython future
 RUN echo "conda activate pytorch36" >> /root/.bashrc
 
