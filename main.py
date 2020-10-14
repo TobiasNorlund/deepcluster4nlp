@@ -16,7 +16,7 @@ import torchvision.transforms as transforms
 # import torchvision.datasets as datasets
 import torchnlp.datasets as datasets
 
-# from deepcluster import clustering
+import clustering
 import models
 from util import AverageMeter, Logger, UnifLabelSampler
 from data_loader import *
@@ -32,8 +32,8 @@ def parse_args():
     #parser.add_argument('--sobel', action='store_true', help='Sobel filtering')
     parser.add_argument('--clustering', type=str, choices=['Kmeans', 'PIC'],
                         default='Kmeans', help='clustering algorithm (default: Kmeans)')
-    parser.add_argument('--nmb_cluster', '--k', type=int, default=10000,
-                        help='number of cluster for k-means (default: 10000)')
+    parser.add_argument('--nmb_cluster', '--k', type=int, default=500,
+                        help='number of cluster for k-means (default: 500)')
     parser.add_argument('--lr', default=0.05, type=float,
                         help='learning rate (default: 0.05)')
     parser.add_argument('--wd', default=-5, type=float,
@@ -89,8 +89,8 @@ def main(args):
     model = models.__dict__[args.arch](tokenizer)
     fd = int(model.top_layer.weight.size()[1])
     model.top_layer = None
-    model.features = torch.nn.DataParallel(model.features)
-    # model.cuda()
+    #model.features = torch.nn.DataParallel(model.features, device_ids=[0])
+    model.cuda()
     cudnn.benchmark = True
 
     # create optimizer
@@ -132,7 +132,7 @@ def main(args):
 
 
     # clustering algorithm to use
-    # deepcluster = clustering.__dict__[args.clustering](args.nmb_cluster)
+    deepcluster = clustering.__dict__[args.clustering](args.nmb_cluster)
 
     # training convnet with DeepCluster
     for epoch in range(args.start_epoch, args.epochs):
@@ -294,8 +294,8 @@ def compute_features(dataloader, model, N):
     model.eval()
     # discard the label information in the dataloader
     for i, batch in enumerate(dataloader):
-        # input_var = torch.autograd.Variable(input_tensor.cuda(), volatile=True)
-        input_var = torch.autograd.Variable(batch["input_ids"], volatile=True)
+        input_var = torch.autograd.Variable(batch["input_ids"].cuda(), volatile=True)
+        # input_var = torch.autograd.Variable(batch["input_ids"], volatile=True)
 
         aux = model(input_var).data.cpu().numpy()
 
