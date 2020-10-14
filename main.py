@@ -156,11 +156,18 @@ def main(args):
         features = compute_features(dataloader, model, len(dataset))
 
         # save the features and dataset
-        dataset = wandb.Artifact(name=f'features', type='dataset')
-        with dataset.new_file(f'epoch_{epoch}.csv') as f:
-            pd.DataFrame([[d['text'] for d in dataset.data], features]).to_csv(f)
+        #wandb_dataset = wandb.Artifact(name=f'data', type='dataset')
+        #with wandb_dataset.new_file(f'data_epoch_{epoch}.csv') as f:
+        #    pd.DataFrame(np.asanyarray([d['text'] for d in dataset.data])).to_csv(f, sep='\t')
+        #run.use_artifact(wandb_dataset1)
 
-        run.use_artifact(dataset)
+        #wandb_dataset2 = wandb.Artifact(name=f'features', type='dataset')
+        #with wandb_dataset.new_file(f'features_epoch_{epoch}.csv') as f:
+        #    pd.DataFrame(features).to_csv(f, sep='\t')
+        #run.use_artifact(wandb_dataset)
+        
+        pd.DataFrame(np.asanyarray([[d['text'], d['sentiment']] for d in dataset.data])).to_csv(f'res/data_epoch_{epoch}.tsv', sep='\t', index=None, header=['text', 'sentiment'])
+        pd.DataFrame(features).to_csv(f'res/features_epoch_{epoch}.tsv', sep='\t', index=None, header=False)
 
         # cluster the features
         if args.verbose:
