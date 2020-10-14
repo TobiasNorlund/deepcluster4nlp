@@ -4,3 +4,4 @@ torch
 torchvision
 pytorch-nlp
 transformers
+wandb

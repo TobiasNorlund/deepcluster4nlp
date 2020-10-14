@@ -17,6 +17,7 @@ import models
 from models.TextCNN import textcnn
 from util import AverageMeter, Logger, UnifLabelSampler
 from data_loader import *
+import wandb
 
 
 def parse_args():
@@ -62,6 +63,7 @@ def main(args):
     torch.manual_seed(args.seed)
     torch.cuda.manual_seed_all(args.seed)
     np.random.seed(args.seed)
+    run = wandb.init(project='deepcluster4nlp', config=args)
 
     # load the data
     end = time.time()
@@ -201,6 +203,12 @@ def main(args):
             except IndexError:
                 pass
             print('####################### \n')
+
+        # wandb log
+        summary_dict = {'time': time.time() - end, 'clustering_loss': clustering_loss, 'convnet_loss': loss}
+        wandb.log(summary_dict)
+        wandb.watch(net)
+
         # save running checkpoint
         torch.save({'epoch': epoch + 1,
                     'arch': args.arch,
