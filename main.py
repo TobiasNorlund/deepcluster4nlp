@@ -87,6 +87,7 @@ def main(args):
     
     num_class_features = 4096
     model = textcnn(tokenizer,num_class_features=num_class_features)
+
     #model = models.__dict__[args.arch](tokenizer)
     #fd =int(model.top_layer.weight.size()[1])  # replaced by num_class_features
     
