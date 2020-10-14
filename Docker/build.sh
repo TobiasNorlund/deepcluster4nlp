@@ -1,3 +1,3 @@
 #!/bin/bash
 
-docker build . -t torch
+docker build --rm -t torch --progress plain .

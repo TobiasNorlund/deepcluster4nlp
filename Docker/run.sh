@@ -1,1 +1,1 @@
-docker run --gpus all -it --name deepcluster  torch /bin/bash
+docker run --rm -it -v $(pwd):/usr/src/deepcluster4nlp torch /bin/bash
