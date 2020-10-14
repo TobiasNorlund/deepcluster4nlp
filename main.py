@@ -280,11 +280,12 @@ def compute_features(dataloader, model, N):
     batch_time = AverageMeter()
     end = time.time()
     model.eval()
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     # discard the label information in the dataloader
     for i, batch in enumerate(dataloader):
         # input_var = torch.autograd.Variable(input_tensor.cuda(), volatile=True)
         with torch.no_grad():
-            input_var = torch.autograd.Variable(batch["input_ids"])
+            input_var = torch.autograd.Variable(batch[0].cuda())
 
             aux = model(input_var).data.cpu().numpy()
 
