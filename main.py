@@ -70,6 +70,13 @@ def main(args):
     if args.verbose:
         print(('Load dataset: {0:.2f} s'.format(time.time() - end)))
 
+    # cluster_lists = [[i*len(dataset)//args.nmb_cluster + j for j in range(len(dataset)//args.nmb_cluster)]
+    #                  for i in range(args.nmb_cluster)]
+    #
+    # reassigned_dataset = cluster_assign(cluster_lists, dataset)
+    #
+    # reassigned_dataloader = get_dataloader(reassigned_dataset, tokenizer)
+
     # CNN
     if args.verbose:
         print(('Architecture: {}'.format(args.arch)))
@@ -138,12 +145,15 @@ def main(args):
         if args.verbose:
             print('Assign pseudo labels')
 
-        train_dataset = clustering.cluster_assign(deepcluster.cluster_lists,
-                                                  dataset.data)
+
+        # train_dataset = clustering.cluster_assign(deepcluster.cluster_lists,
+        #                                           dataset.data)
+
+        train_dataset = clustering.cluster_assign(deepcluster.cluster_lists, dataset)
 
         # uniformly sample per target
-        sampler = UnifLabelSampler(int(args.reassign * len(train_dataset)),
-                                   deepcluster.images_lists)
+        # sampler = UnifLabelSampler(int(args.reassign * len(train_dataset)),
+        #                            deepcluster.cluster_lists)
 
         # train_dataloader = torch.utils.data.DataLoader(
         #     train_dataset,

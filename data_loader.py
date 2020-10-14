@@ -32,3 +32,16 @@ def get_dataloader(dataset, tokenizer, batch_size=2):
     # data_collator = DataCollatorForLanguageModeling(tokenizer, mlm=False)
     data_loader = DataLoader(dataset, batch_size=batch_size, collate_fn=collate, num_workers=1)
     return data_loader
+
+
+class ReassignedDataset(Dataset):
+
+    def __init__(self, dataset, pseudolabels):
+        self.dataset = dataset
+        self.pseudolabels = pseudolabels
+
+    def __len__(self):
+        return len(self.dataset)
+
+    def __getitem__(self, index):
+        return self.dataset[index][0], self.pseudolabels[index]
