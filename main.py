@@ -14,6 +14,7 @@ import torchvision.transforms as transforms
 
 import clustering
 import models
+from models.TextCNN import textcnn
 from util import AverageMeter, Logger, UnifLabelSampler
 from data_loader import *
 
@@ -80,9 +81,15 @@ def main(args):
     # CNN
     if args.verbose:
         print(('Architecture: {}'.format(args.arch)))
-    model = models.__dict__[args.arch](tokenizer)
-    fd = int(model.top_layer.weight.size()[1])
-    model.top_layer = None
+    
+    num_class_features = 64
+    model = textcnn(tokenizer,num_class_features=num_class_features)
+    #model = models.__dict__[args.arch](tokenizer)
+    #fd =int(model.top_layer.weight.size()[1])  # replaced by num_class_features
+    
+    model.reset_top_layer()
+    #model.top_layer = None
+    
     #model.features = torch.nn.DataParallel(model.features, device_ids=[0])
     model.cuda()
     cudnn.benchmark = True
@@ -131,7 +138,7 @@ def main(args):
         end = time.time()
 
         # remove head
-        model.top_layer = None
+        model.reset_top_layer()#top_layer = None
 
         # get the features for the whole dataset
         features = compute_features(dataloader, model, len(dataset))
@@ -166,10 +173,13 @@ def main(args):
         train_dataloader = get_dataloader(train_dataset, tokenizer, args.batch)
 
         # set last fully connected layer
-        model.top_layer = nn.Linear(4096, len(deepcluster.cluster_lists))
-        model.top_layer.weight.data.normal_(0, 0.01)
-        model.top_layer.bias.data.zero_()
-        model.top_layer.cuda()
+        model.set_top_layer(cluster_list_length=len(deepcluster.cluster_lists))
+
+        #model.classifier = nn.Sequential(*mlp)
+        #model.top_layer = nn.Linear(num_class_features,len(deepcluster.cluster_lists) )
+        #model.top_layer.weight.data.normal_(0, 0.01)
+        #model.top_layer.bias.data.zero_()
+        #model.top_layer.cuda()
 
         # train network with clusters as pseudo-labels
         end = time.time()
@@ -276,7 +286,7 @@ def train(loader, model, crit, opt, epoch):
                    'Data: {data_time.val:.3f} ({data_time.avg:.3f})\t'
                    'Loss: {loss.val:.4f} ({loss.avg:.4f})'
                    .format(epoch, i, len(loader), batch_time=batch_time,
-                           data_time=data_time, loss=losses)))
+                           data_time=data_time, #loss=losses)))
 
     return losses.avg
 
