@@ -74,19 +74,26 @@ def pil_loader(path):
 #         return len(self.imgs)
 
 
-def preprocess_features(npdata, pca=256):
-    """Preprocess an array of features.
+def preprocess_features(npdata, pca_factor=16):
+    """Preprocess an array of features including PCA 
+
     Args:
         npdata (np.array N * ndim): features to preprocess
-        pca (int): dim of output
+        pca_factor (int): factor of dimension reduction (default = 16)
+        minimum resulting PCA dimension is 4 and maximum 256
     Returns:
         np.array of dim N * pca: data PCA-reduced, whitened and L2-normalized
     """
     _, ndim = npdata.shape
     npdata =  npdata.astype('float32')
 
+
+    pca_dim = np.ceil(ndim/pca_factor)
+    if pca_dim > 256: pca_dim = 256
+    if pca_dim < 4: pca_dim = 4
+
     # Apply PCA-whitening with Faiss
-    mat = faiss.PCAMatrix (ndim, pca, eigen_power=-0.5)
+    mat = faiss.PCAMatrix (ndim, pca_dim, eigen_power=-0.5)
     mat.train(npdata)
     assert mat.is_trained
     npdata = mat.apply_py(npdata)

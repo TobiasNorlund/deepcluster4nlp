@@ -29,8 +29,8 @@ def parse_args():
     # parser.add_argument('--sobel', action='store_true', help='Sobel filtering')
     parser.add_argument('--clustering', type=str, choices=['Kmeans', 'PIC'],
                         default='Kmeans', help='clustering algorithm (default: Kmeans)')
-    parser.add_argument('--nmb_cluster', '--k', type=int, default=500,
-                        help='number of cluster for k-means (default: 500)')
+    parser.add_argument('--nmb_cluster', '--k', type=int, default=100,
+                        help='number of cluster for k-means (default: 100)')
     parser.add_argument('--lr', default=0.05, type=float,
                         help='learning rate (default: 0.05)')
     parser.add_argument('--wd', default=-5, type=float,
@@ -286,7 +286,7 @@ def train(loader, model, crit, opt, epoch):
                    'Data: {data_time.val:.3f} ({data_time.avg:.3f})\t'
                    'Loss: {loss.val:.4f} ({loss.avg:.4f})'
                    .format(epoch, i, len(loader), batch_time=batch_time,
-                           data_time=data_time, #loss=losses)))
+                           data_time=data_time, loss=losses)))
 
     return losses.avg
 
