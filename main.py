@@ -184,7 +184,7 @@ def main(args):
                    .format(epoch, time.time() - end, clustering_loss, loss)))
             try:
                 nmi = normalized_mutual_info_score(
-                    clustering.arrange_clustering(deepcluster.images_lists),
+                    clustering.arrange_clustering(deepcluster.cluster_lists),
                     clustering.arrange_clustering(cluster_log.data[-1])
                 )
                 print(('NMI against previous assignment: {0:.3f}'.format(nmi)))
@@ -199,7 +199,7 @@ def main(args):
                    os.path.join(args.exp, 'checkpoint.pth.tar'))
 
         # save cluster assignments
-        cluster_log.log(deepcluster.images_lists)
+        cluster_log.log(deepcluster.cluster_lists)
 
 
 def train(loader, model, crit, opt, epoch):
@@ -251,13 +251,13 @@ def train(loader, model, crit, opt, epoch):
 
         # target = target.cuda(async=True)
         input_var = torch.autograd.Variable(input_tensor.cuda())
-        target_var = torch.autograd.Variable(target)
+        target_var = torch.autograd.Variable(target.cuda())
 
         output = model(input_var)
         loss = crit(output, target_var)
 
         # record loss
-        losses.update(loss.data[0], input_tensor.size(0))
+        losses.update(loss.data.item(), input_tensor.size()[0])
 
         # compute gradient and do SGD step
         opt.zero_grad()
@@ -310,7 +310,7 @@ def compute_features(dataloader, model, N):
             batch_time.update(time.time() - end)
             end = time.time()
 
-            if args.verbose and (i % 200) == 0:
+            if args.verbose and (i % 5) == 0:
                 print(('{0} / {1}\t'
                        'Time: {batch_time.val:.3f} ({batch_time.avg:.3f})'
                        .format(i, len(dataloader), batch_time=batch_time)))

@@ -143,7 +143,7 @@ def make_graph(xb, nnn):
 def cluster_assign(cluster_lists, dataset):
     assert cluster_lists is not None
 
-    pseudolabels = np.zeros(len(dataset), np.int32)
+    pseudolabels = np.zeros(len(dataset), np.long)
     for cluster_id, datapoints in enumerate(cluster_lists):
         for data_id in datapoints:
             pseudolabels[data_id] = cluster_id
