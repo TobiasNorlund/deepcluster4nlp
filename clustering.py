@@ -88,9 +88,12 @@ def preprocess_features(npdata, pca_factor=16):
     npdata =  npdata.astype('float32')
 
 
-    pca_dim = np.ceil(ndim/pca_factor)
-    if pca_dim > 256: pca_dim = 256
-    if pca_dim < 4: pca_dim = 4
+    #pca_dim = np.ceil(ndim/pca_factor)
+    #if pca_dim > 256: pca_dim = 256
+    #if pca_dim < 4: pca_dim = 4
+    #pca_dim = int(pca_dim)
+
+    pca_dim = 256
 
     # Apply PCA-whitening with Faiss
     mat = faiss.PCAMatrix (ndim, pca_dim, eigen_power=-0.5)

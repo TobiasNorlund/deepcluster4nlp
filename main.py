@@ -85,7 +85,7 @@ def main(args):
     if args.verbose:
         print(('Architecture: {}'.format(args.arch)))
     
-    num_class_features = 4096
+    num_class_features = 64
     model = textcnn(tokenizer,num_class_features=num_class_features)
 
     #model = models.__dict__[args.arch](tokenizer)
@@ -98,13 +98,20 @@ def main(args):
     model.cuda()
     cudnn.benchmark = True
 
+    wandb.watch(model)
+
     # create optimizer
-    optimizer = torch.optim.SGD(
+    optimizer = torch.optim.Adam(
         [x for x in model.parameters() if x.requires_grad],
-        lr=args.lr,
-        momentum=args.momentum,
-        weight_decay=10**args.wd
+        lr=args.lr
     )
+
+    #optimizer = torch.optim.SGD(
+    #        [x for x in model.parameters() if x.requires_grad],
+    #        lr=args.lr, 
+    #        momentum=args.momentum,
+    #        weight_decay=10**args.wd
+    #        )
 
     # define loss function
     criterion = nn.CrossEntropyLoss().cuda()
@@ -189,6 +196,8 @@ def main(args):
         end = time.time()
         loss = train(train_dataloader, model, criterion, optimizer, epoch)
 
+        summary_dict = {'time': time.time() - end, 'clustering_loss': clustering_loss, 'convnet_loss': loss, 'clusters': len(deepcluster.cluster_lists)}
+
         # print log
         if args.verbose:
             print(('###### Epoch [{0}] ###### \n'
@@ -201,15 +210,14 @@ def main(args):
                     clustering.arrange_clustering(deepcluster.cluster_lists),
                     clustering.arrange_clustering(cluster_log.data[-1])
                 )
+                summary_dict['NMI'] = nmi
                 print(('NMI against previous assignment: {0:.3f}'.format(nmi)))
             except IndexError:
                 pass
             print('####################### \n')
 
         # wandb log
-        summary_dict = {'time': time.time() - end, 'clustering_loss': clustering_loss, 'convnet_loss': loss}
         wandb.log(summary_dict)
-        wandb.watch(net)
 
         # save running checkpoint
         torch.save({'epoch': epoch + 1,
@@ -242,11 +250,16 @@ def train(loader, model, crit, opt, epoch):
     model.train()
 
     # create an optimizer for the last fc layer
-    optimizer_tl = torch.optim.SGD(
+    optimizer_tl = torch.optim.Adam(
         model.top_layer.parameters(),
         lr=args.lr,
-        weight_decay=10**args.wd,
     )
+
+    #optimizer_tl = torch.optim.SGD(
+    #        model.top_layer.parameters(),
+    #        lr=args.lr,
+    #        weight_decay=10**args.wd,
+    #        )
 
     end = time.time()
     for i, (input_tensor, target) in enumerate(loader):
@@ -290,7 +303,9 @@ def train(loader, model, crit, opt, epoch):
         batch_time.update(time.time() - end)
         end = time.time()
 
-        if args.verbose and (i % 200) == 0:
+        if args.verbose and (i % 5) == 0:
+            summary_dict = {'train_time': batch_time.avg, 'train_loss': loss.data.item()}
+            wandb.log(summary_dict)
             print(('Epoch: [{0}][{1}/{2}]\t'
                    'Time: {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
                    'Data: {data_time.val:.3f} ({data_time.avg:.3f})\t'
