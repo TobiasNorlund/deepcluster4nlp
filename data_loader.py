@@ -24,13 +24,13 @@ def get_tokenizer():
     return tokenizer
 
 
-def get_dataloader(dataset, tokenizer, batch_size=2):
+def get_dataloader(dataset, tokenizer, batch_size=2, num_workers=1):
     def collate(examples):
         return (pad_sequence([x[0] for x in examples], True, tokenizer.pad_token_id),
                 torch.tensor([x[1] for x in examples]))
 
     # data_collator = DataCollatorForLanguageModeling(tokenizer, mlm=False)
-    data_loader = DataLoader(dataset, batch_size=batch_size, collate_fn=collate, num_workers=1)
+    data_loader = DataLoader(dataset, batch_size=batch_size, collate_fn=collate, num_workers=num_workers)
     return data_loader
 
 
