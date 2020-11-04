@@ -1,0 +1,29 @@
+program: main.py
+command:
+  - "python3"
+  - ${program}
+  - "/datasets01/imagenet_full_size/061417/train"
+  - "--arch"
+  - "textcnn"
+  - "--verbose"
+method: random
+metric:
+  name: val_loss
+  goal: minimize
+parameters:
+  lr:
+    min: 0.001
+    max: 0.01
+  wd:
+    min: -7
+    max: -2
+  k:
+    min: 4
+    max: 20
+  num_class_features:
+    values: [32, 64, 128, 256, 512, 1024, 2048, 4096]
+early_terminate:
+  type: hyperband
+  s: 2
+  eta: 3
+  max_iter: 27

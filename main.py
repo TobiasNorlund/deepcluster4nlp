@@ -57,6 +57,8 @@ def parse_args():
     parser.add_argument('--seed', type=int, default=31, help='random seed (default: 31)')
     parser.add_argument('--exp', type=str, default='', help='path to exp folder')
     parser.add_argument('--verbose', action='store_true', help='chatty')
+    parser.add_argument('--num_class_features', type=int, default=64,
+                        help='number of output features from the cnn (default 64)')
     return parser.parse_args()
 
 
@@ -85,9 +87,8 @@ def main(args):
     # CNN
     if args.verbose:
         print(('Architecture: {}'.format(args.arch)))
-    
-    num_class_features = 64
-    model = textcnn(tokenizer,num_class_features=num_class_features)
+
+    model = textcnn(tokenizer, num_class_features=args.num_class_features)
 
     #model = models.__dict__[args.arch](tokenizer)
     #fd =int(model.top_layer.weight.size()[1])  # replaced by num_class_features
