@@ -155,19 +155,24 @@ def main(args):
         # get the features for the whole dataset
         features = compute_features(dataloader, model, len(dataset))
 
-        # save the features and dataset
-        #wandb_dataset = wandb.Artifact(name=f'data', type='dataset')
-        #with wandb_dataset.new_file(f'data_epoch_{epoch}.csv') as f:
-        #    pd.DataFrame(np.asanyarray([d['text'] for d in dataset.data])).to_csv(f, sep='\t')
-        #run.use_artifact(wandb_dataset1)
+        should_save = False
+        if epoch % 50 == 0 or epoch == args.epochs-1:
+            should_save = True
 
-        #wandb_dataset2 = wandb.Artifact(name=f'features', type='dataset')
-        #with wandb_dataset.new_file(f'features_epoch_{epoch}.csv') as f:
-        #    pd.DataFrame(features).to_csv(f, sep='\t')
-        #run.use_artifact(wandb_dataset)
-        
-        pd.DataFrame(np.asanyarray([[d['text'], d['sentiment']] for d in dataset.data])).to_csv(f'res/data_epoch_{epoch}.tsv', sep='\t', index=None, header=['text', 'sentiment'])
-        pd.DataFrame(features).to_csv(f'res/features_epoch_{epoch}.tsv', sep='\t', index=None, header=False)
+        if should_save:
+            # save the features and dataset
+            wandb_dataset = wandb.Artifact(name=f'data', type='dataset')
+            with wandb_dataset.new_file(f'data_epoch_{epoch}.csv') as f:
+               pd.DataFrame(np.asanyarray([d['text'] for d in dataset.data])).to_csv(f, sep='\t')
+            run.use_artifact(wandb_dataset1)
+
+            #wandb_dataset2 = wandb.Artifact(name=f'features', type='dataset')
+            with wandb_dataset.new_file(f'features_epoch_{epoch}.csv') as f:
+               pd.DataFrame(features).to_csv(f, sep='\t')
+            run.use_artifact(wandb_dataset)
+
+            pd.DataFrame(np.asanyarray([[d['text'], d['sentiment']] for d in dataset.data])).to_csv(f'res/data_epoch_{epoch}.tsv', sep='\t', index=None, header=['text', 'sentiment'])
+            pd.DataFrame(features).to_csv(f'res/features_epoch_{epoch}.tsv', sep='\t', index=None, header=False)
 
         # cluster the features
         if args.verbose:
@@ -240,6 +245,11 @@ def main(args):
                     'state_dict': model.state_dict(),
                     'optimizer' : optimizer.state_dict()},
                    os.path.join(args.exp, 'checkpoint.pth.tar'))
+
+        if epoch == args.epochs-1:
+            model_artifact = wandb.Artifact(name=f'model', type='model')
+            model_artifact.add_file(os.path.join(args.exp, 'checkpoint.pth.tar'))
+            run.use_artifact(model_artifact)
 
         # save cluster assignments
         cluster_log.log(deepcluster.cluster_lists)
