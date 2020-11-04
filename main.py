@@ -162,15 +162,15 @@ def main(args):
 
         if should_save:
             # save the features and dataset
-            wandb_dataset = wandb.Artifact(name=f'data', type='dataset')
+            wandb_dataset1 = wandb.Artifact(name=f'data', type='dataset')
             with wandb_dataset.new_file(f'data_epoch_{epoch}.csv') as f:
                pd.DataFrame(np.asanyarray([d['text'] for d in dataset.data])).to_csv(f, sep='\t')
             run.use_artifact(wandb_dataset1)
 
-            #wandb_dataset2 = wandb.Artifact(name=f'features', type='dataset')
+            wandb_dataset2 = wandb.Artifact(name=f'features', type='dataset')
             with wandb_dataset.new_file(f'features_epoch_{epoch}.csv') as f:
                pd.DataFrame(features).to_csv(f, sep='\t')
-            run.use_artifact(wandb_dataset)
+            run.use_artifact(wandb_dataset2)
 
             pd.DataFrame(np.asanyarray([[d['text'], d['sentiment']] for d in dataset.data])).to_csv(f'res/data_epoch_{epoch}.tsv', sep='\t', index=None, header=['text', 'sentiment'])
             pd.DataFrame(features).to_csv(f'res/features_epoch_{epoch}.tsv', sep='\t', index=None, header=False)
