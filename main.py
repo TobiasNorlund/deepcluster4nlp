@@ -107,7 +107,7 @@ def main(args):
     wandb.watch(model)
 
     # create optimizer
-    optimizer = torch.optim.Adam(
+    optimizer = torch.optim.AdamW(
         [x for x in model.parameters() if x.requires_grad],
         lr=args.lr
     )
