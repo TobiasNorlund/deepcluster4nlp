@@ -3,9 +3,11 @@ import argparse
 import os
 import time
 import copy
+import tqdm
 
 import numpy as np
 from sklearn.metrics.cluster import normalized_mutual_info_score
+import torch
 import torch.nn as nn
 import torch.nn.parallel
 import torch.backends.cudnn as cudnn
@@ -16,7 +18,7 @@ import torchvision.transforms as transforms
 import clustering
 import models
 from models.TextCNN import textcnn
-from util import AverageMeter, Logger, UnifLabelSampler
+from util import AverageMeter, Logger, UnifLabelSampler, load_model
 from data_loader import *
 
 import pandas as pd
@@ -29,7 +31,7 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 def parse_args():
     parser = argparse.ArgumentParser(description='PyTorch Implementation of DeepCluster')
 
-    parser.add_argument('data', metavar='DIR', help='path to dataset')
+    parser.add_argument('data', metavar='DIR', help='path to dataset', default='')
     parser.add_argument('--arch', '-a', type=str, metavar='ARCH',
                         choices=['alexnet', 'vgg16', 'textcnn'], default='textcnn',
                         help='CNN architecture (default: alexnet)')
@@ -47,7 +49,7 @@ def parse_args():
                         reassignments of clusters (default: 1)""")
     parser.add_argument('--workers', default=4, type=int,
                         help='number of data loading workers (default: 4)')
-    parser.add_argument('--epochs', type=int, default=200,
+    parser.add_argument('--epochs', type=int, default=10,
                         help='number of total epochs to run (default: 200)')
     parser.add_argument('--start_epoch', default=0, type=int,
                         help='manual epoch number (useful on restarts) (default: 0)')
@@ -56,14 +58,55 @@ def parse_args():
     parser.add_argument('--momentum', default=0.9, type=float, help='momentum (default: 0.9)')
     parser.add_argument('--resume', default='', type=str, metavar='PATH',
                         help='path to checkpoint (default: None)')
-    parser.add_argument('--checkpoints', type=int, default=25000,
+    parser.add_argument('--checkpoints', type=int, default=25,
                         help='how many iterations between two checkpoints (default: 25000)')
     parser.add_argument('--seed', type=int, default=31, help='random seed (default: 31)')
     parser.add_argument('--exp', type=str, default='', help='path to exp folder')
     parser.add_argument('--verbose', action='store_true', help='chatty')
     parser.add_argument('--num_class_features', type=int, default=64,
                         help='number of output features from the cnn (default 64)')
+    parser.add_argument('--model_path')
     return parser.parse_args()
+
+
+def train_supervised_model(args):
+    tokenizer = get_tokenizer()
+    dataset = ImdbDataset(True, tokenizer)
+    dataloader = get_dataloader(dataset, tokenizer, args.batch)
+
+    num_class_features = 64
+    num_class = 2
+
+    if args.model_path:
+        model = load_model(args.model_path, tokenizer)
+        model.set_top_layer(num_class)
+    else:
+        model = textcnn(tokenizer, num_class_features=num_class_features)
+
+    optimizer = torch.optim.Adam(
+        [x for x in model.parameters() if x.requires_grad],
+        lr=args.lr
+    )
+
+    criterion = nn.CrossEntropyLoss().to(device)
+
+    for epoch in range(args.epochs):
+        loss = train(dataloader, model, criterion, optimizer, epoch)
+
+    test_dataset = ImdbDataset(False, tokenizer)
+    test_dataloader = get_dataloader(test_dataset, tokenizer, args.batch)
+
+    all_predictions = []
+    all_targets = []
+    for input_tensor, target in tqdm.tqdm(test_dataloader):
+        results = model(input_tensor)
+        all_predictions.extend(torch.argmax(results, -1).tolist())
+        all_targets.extend(target.tolist())
+
+    all_predictions = np.array(all_predictions)
+    all_targets = np.array(all_targets)
+    accuracy = np.sum(all_predictions == all_targets) / len(all_predictions)
+    print(f"Accuracy: {accuracy}")
 
 
 def main(args):
@@ -78,6 +121,7 @@ def main(args):
     tokenizer = get_tokenizer()
     dataset = ImdbDataset(True, tokenizer)
     dataloader = get_dataloader(dataset, tokenizer, args.batch)
+
     if args.verbose:
         print(('Load dataset: {0:.2f} s'.format(time.time() - end)))
 
@@ -104,7 +148,7 @@ def main(args):
     model.to(device)
     cudnn.benchmark = True
 
-    wandb.watch(model)
+    # wandb.watch(model)
 
     # create optimizer
     optimizer = torch.optim.AdamW(
@@ -280,10 +324,10 @@ def train(loader, model, crit, opt, epoch):
     model.train()
 
     # create an optimizer for the last fc layer
-    optimizer_tl = torch.optim.Adam(
-        model.top_layer.parameters(),
-        lr=args.lr,
-    )
+    # optimizer_tl = torch.optim.Adam(
+    #     model.top_layer.parameters(),
+    #     lr=args.lr,
+    # )
 
     #optimizer_tl = torch.optim.SGD(
     #        model.top_layer.parameters(),
@@ -309,7 +353,7 @@ def train(loader, model, crit, opt, epoch):
                 'epoch': epoch + 1,
                 'arch': args.arch,
                 'state_dict': model.state_dict(),
-                'optimizer' : opt.state_dict()
+                'optimizer': opt.state_dict()
             }, path)
 
         # target = target.cuda(async=True)
@@ -317,17 +361,31 @@ def train(loader, model, crit, opt, epoch):
         target_var = torch.autograd.Variable(target.to(device))
 
         output = model(input_var)
+
+        print(f"Out: {output}")
+
         loss = crit(output, target_var)
 
         # record loss
         losses.update(loss.data.item(), input_tensor.size()[0])
 
+
         # compute gradient and do SGD step
         opt.zero_grad()
-        optimizer_tl.zero_grad()
+        # optimizer_tl.zero_grad()
         loss.backward()
+
+        total_norm = 0
+        for p in model.parameters():
+            param_norm = p.grad.data.norm(2)
+            total_norm += param_norm.item() ** 2
+        total_norm = total_norm ** (1. / 2)
+        print(total_norm)
+
         opt.step()
-        optimizer_tl.step()
+        # optimizer_tl.step()
+
+
 
         # measure elapsed time
         batch_time.update(time.time() - end)
@@ -335,7 +393,7 @@ def train(loader, model, crit, opt, epoch):
 
         if args.verbose and (i % 5) == 0:
             summary_dict = {'train_time': batch_time.avg, 'train_loss': loss.data.item()}
-            wandb.log(summary_dict)
+            # wandb.log(summary_dict)
             print(('Epoch: [{0}][{1}/{2}]\t'
                    'Time: {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
                    'Data: {data_time.val:.3f} ({data_time.avg:.3f})\t'
@@ -384,3 +442,4 @@ def compute_features(dataloader, model, N):
 if __name__ == '__main__':
     args = parse_args()
     main(args)
+    # train_supervised_model(args)

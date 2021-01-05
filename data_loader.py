@@ -15,7 +15,8 @@ class ImdbDataset(Dataset):
         return len(self.data)
 
     def __getitem__(self, index):
-        return torch.tensor(self.tokenizer.encode(self.data[index]["text"])), torch.tensor(0)
+        return (torch.tensor(self.tokenizer.encode(self.data[index]["text"])),
+                torch.tensor(0 if self.data[index]["sentiment"] == "neg" else 1))
 
 
 def get_tokenizer():
@@ -30,7 +31,8 @@ def get_dataloader(dataset, tokenizer, batch_size=2, num_workers=1):
                 torch.tensor([x[1] for x in examples]))
 
     # data_collator = DataCollatorForLanguageModeling(tokenizer, mlm=False)
-    data_loader = DataLoader(dataset, batch_size=batch_size, collate_fn=collate, num_workers=num_workers)
+    data_loader = DataLoader(dataset, batch_size=batch_size, collate_fn=collate, num_workers=1, shuffle=True)
+
     return data_loader
 
 

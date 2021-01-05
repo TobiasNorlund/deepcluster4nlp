@@ -46,8 +46,11 @@ class TextCNN(nn.Module):
 
         fc_x = self.fc(fc_x)
 
+        # print(f"fc: {fc_x}")
+
         if self.top_layer:
             fc_x = self.relu(fc_x)
+            # print(f"Relu: {fc_x}")
             fc_x = self.top_layer(fc_x)
 
         return fc_x
@@ -55,11 +58,11 @@ class TextCNN(nn.Module):
     def set_top_layer(self, cluster_list_length):
         # set last fully connected layer
         # cluster_list_length = len(deepcluster.cluster_lists)
-        
+
         self.top_layer = nn.Linear(self.num_class_features, cluster_list_length)
-        self.top_layer.weight.data.normal_(0, 0.01)
+        self.top_layer.weight.data.normal_(0, 0.1)
         self.top_layer.bias.data.zero_()
-        self.top_layer.cuda()
+        # self.top_layer.cuda()
     
     def reset_top_layer(self):
         self.top_layer = None
